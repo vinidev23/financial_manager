@@ -17,4 +17,4 @@ pool.connect((err, client, release) => {
     release();
     });
 
-    module.export = pool;
+    module.exports = pool;
