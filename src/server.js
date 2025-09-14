@@ -13,30 +13,30 @@ app.get('/', (req, res) => {
     res.status(200).json({ message: 'API do Gerenciador de Finanças rodando!'});
 });
 
-app.post('/api/users', async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-        const checkUser = await db.query("SELECT * FROM users WHERE email = $1", [`${email}`]);
-        if (checkUser.rows.length > 0) {
-            return res.status(409).json({ message: 'E-mail já Cadastrado.' });
-        }
-
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-        const result = await db.query(
-            'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
-            [name, email, hashedPassword]
-        );
-
-        const newUser = result.rows[0];
-        delete newUser.password;
-        res.status(201).json(newUser);
-    } catch (error) {
-        console.error("Erro ao registrar usuário", error);
-        res.status(500).json({ message: "Erro interno do servidor." });
+    const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
+
+    const user = userResult.rows[0];
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Credenciais inválidas.' });
+    }
+
+    delete user.password;
+    res.status(200).json({ message: 'Login bem-sucedido!', user });
+
+  } catch (error) {
+    console.error('Erro no login:', error);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+    
 });
 
 app.listen(PORT, () => {
