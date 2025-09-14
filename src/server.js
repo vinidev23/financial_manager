@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import db from './db.js';
+import bcrypt from 'bcrypt';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,12 +22,17 @@ app.post('/api/users', async (req, res) => {
             return res.status(409).json({ message: 'E-mail já Cadastrado.' });
         }
 
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
         const result = await db.query(
             'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
-            [name, email, password]
+            [name, email, hashedPassword]
         );
 
-        res.status(201).json(result.rows[0]);
+        const newUser = result.rows[0];
+        delete newUser.password;
+        res.status(201).json(newUser);
     } catch (error) {
         console.error("Erro ao registrar usuário", error);
         res.status(500).json({ message: "Erro interno do servidor." });
